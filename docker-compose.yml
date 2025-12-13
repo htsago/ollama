@@ -1,0 +1,62 @@
+services:
+  ollama-service:
+    image: ollama/ollama:latest
+    container_name: ollama-central-service
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_storage:/root/.ollama
+    restart: unless-stopped
+    environment:
+      - OLLAMA_ORIGINS=*
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 3G
+        reservations:
+          memory: 512M
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: ollama-model-init
+    depends_on:
+      ollama-service:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command: >
+      -c "
+        echo 'Pulling required models...' &&
+        OLLAMA_HOST=http://ollama-service:11434 ollama pull bge-m3:latest &&
+        echo '✓ All models pulled successfully!'
+      "
+    restart: "no"
+
+  ollama-cleanup:
+    image: docker:latest
+    container_name: ollama-cleanup
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: >
+      sh -c "
+        while true; do
+          echo 'Running cleanup...';
+          docker system prune -af --volumes --filter 'until=168h';
+          sleep 86400;
+        done
+      "
+    restart: unless-stopped
+
+volumes:
+  ollama_storage:
+    driver: local
+
