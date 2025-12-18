@@ -12,7 +12,14 @@
    ```bash
    docker-compose up -d
    ```
+3. **Pull the embedding model (one-time only)**
 
+   ```bash
+   docker exec ollama-central-service ollama pull bge-m3:latest
+   ```
+> You can run ```bash 
+                     ./pull-model.sh
+                  ```
    The Ollama server will be available at `http://localhost:11434` (locally) or `http://<YOUR-SERVER-IP>:11434` (on a VPS).
 
 ---
